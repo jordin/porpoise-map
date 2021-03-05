@@ -6,10 +6,10 @@ File: map.py
 Description: handles the gui
 """
 from PIL import Image, ImageTk
-import serial.tools.list_ports
 import threading, sys, os
 import tkinter as tk
-import serial
+import connection as conn
+import math
 import time
 
 port = None
@@ -23,9 +23,16 @@ img_height = 861
 hydrophone_x = 700
 hydrophone_y = 600
 
-# porpoise position
-porpoise_x = 800 
-porpoise_y = 500
+# porpoise position 
+default_porpoise_x = 800 
+default_porpoise_y = 500
+
+# porpoise position (initially off screen)
+porpoise_x = -100
+porpoise_y = -100
+
+# Map scale
+metre_to_pixel_multiplier = 0.0712867647
 
 # pending outgoing messages
 send_queue = []
@@ -38,10 +45,14 @@ if len(sys.argv) > 1:
 if len(sys.argv) > 2:
     baud_rate = int(sys.argv[2])
 
-# train position (initially off screen)
-pos_x = -100
-pos_y = -100
-direction = 'n'
+ser = conn.create_serial_connection()
+
+if ser is None:
+    porpoise_x = default_porpoise_x
+    porpoise_y = default_porpoise_y
+
+porpoise_r = "?"
+porpoise_theta = "?"
 
 # immediately prints a debug message
 def log(msg):
@@ -49,7 +60,7 @@ def log(msg):
 
 # update the map window
 def process_updates(root, state):
-    global pos_x, pos_y, direction, ser, img_width, img_height
+    global pos_x, pos_y, img_width, img_height, ser, r, theta
     # create window with appropriate size
     canvas = tk.Canvas(root, width = img_width, height = img_height)
     canvas.pack()
@@ -60,23 +71,38 @@ def process_updates(root, state):
     hydrophone = ImageTk.PhotoImage(file = "img/hydrophone.png")
     canvas.create_image(hydrophone_x, hydrophone_y, image = hydrophone, anchor="center")
 
-    porpoise = ImageTk.PhotoImage(file = "img/porpoise.png")
-    canvas.create_image(porpoise_x, porpoise_y, image = porpoise, anchor="center")
+    # canvas.create_line(hydrophone_x, hydrophone_y, porpoise_x, porpoise_y, width = 4)
 
-    canvas.create_line(hydrophone_x, hydrophone_y, porpoise_x, porpoise_y, width = 4)
+    t = threading.Thread(target = handle_serial_connection)
+    t.daemon = True
+    t.start()
+
+    porpoise_img = ImageTk.PhotoImage(file = "img/porpoise.png")
 
     try:
         while True:
-            # update train icon position
-            # trainimg = ImageTk.PhotoImage(file = f"img/train-{direction}.png")
-            # train = canvas.create_image(pos_x, pos_y, image = trainimg, anchor = "center")
-        
+            range_text = None
+            theta_text = None
+            # update porpoise icon position
+            porpoise = canvas.create_image(porpoise_x, porpoise_y, image = porpoise_img, anchor="center")
+
+            if porpoise_r != "?":
+                range_text = canvas.create_text(4, 4, fill="black", font = "Arial 24", text=f"Range: {int(porpoise_r)}m", anchor="nw")
+                theta_text = canvas.create_text(4, 44, fill="black", font = "Arial 24", text=f"Angle: {int(math.degrees(porpoise_theta))}°", anchor="nw")
+
             root.after_idle(state["next"])
+
             yield
-            # canvas.delete(train)
+
+            canvas.delete(porpoise)
+            if range_text is not None:
+                canvas.delete(range_text)
+            if theta_text is not None:
+                canvas.delete(theta_text)
     except: # window closes (CONTROL+C or X button)
         # close serial port
-        # ser.close()
+        if ser is not None:
+            ser.close()
         os._exit(1)
 
 # create the map window
@@ -91,6 +117,40 @@ def show():
     root.after(1, state["next"])
 
     root.mainloop()
+
+def handle_serial_connection():
+    global ser
+    read_serial_connection(ser)
+
+    # close application when serial port closes    
+    os._exit(1)
+
+def on_update(i, r, theta):
+    global porpoise_x, porpoise_y, hydrophone_x, hydrophone_y, metre_to_pixel_multiplier, porpoise_r, porpoise_theta
+    porpoise_x = hydrophone_x + metre_to_pixel_multiplier * (r * math.cos(theta))
+    porpoise_y = hydrophone_y - metre_to_pixel_multiplier * (r * math.sin(theta))
+    porpoise_r = r
+    porpoise_theta = theta
+
+def read_serial_connection(ser):
+    # ser.write("./map")
+    while (ser.is_open):
+        # read in all data received
+        while (ser.in_waiting):
+            line = ser.readline()
+            log(f"Raw: {line}")
+            
+            params = line.split()
+
+            i = int(params[0])
+            r = float(params[1])
+            theta = float(params[2])
+
+            on_update(i, r, theta)
+
+        time.sleep(0.01)
+
+    ser.is_open = False
 
 try:
     show()
