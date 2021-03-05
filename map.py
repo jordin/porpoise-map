@@ -3,7 +3,7 @@ Programmer: Jordin McEachern
 Program: harbour porpoise map
 Created on: 2021-02-24
 File: map.py
-Description: handles the gui and the serial connection
+Description: handles the gui
 """
 from PIL import Image, ImageTk
 import serial.tools.list_ports
@@ -16,20 +16,16 @@ port = None
 baud_rate = 115200 # default baud rate
 
 # map image dimensions
-img_width = 2505
-img_height = 1140
-
-# padding for map in the window
-x_padding = 0
-y_padding = 0
+img_width = 1353
+img_height = 861
 
 # hydrophone position
-hydrophone_x = 1350
-hydrophone_y = 400
+hydrophone_x = 700
+hydrophone_y = 600
 
 # porpoise position
-porpoise_x = 1500 
-porpoise_y = 430
+porpoise_x = 800 
+porpoise_y = 500
 
 # pending outgoing messages
 send_queue = []
@@ -55,11 +51,11 @@ def log(msg):
 def process_updates(root, state):
     global pos_x, pos_y, direction, ser, img_width, img_height
     # create window with appropriate size
-    canvas = tk.Canvas(root, width = img_width + 2 * x_padding, height = img_height + 2 * y_padding)
+    canvas = tk.Canvas(root, width = img_width, height = img_height)
     canvas.pack()
 
     background = ImageTk.PhotoImage(file = "img/map.png")
-    canvas.create_image(x_padding, y_padding, image = background, anchor="nw")
+    canvas.create_image(img_width / 2, img_height / 2, image = background, anchor="center")
 
     hydrophone = ImageTk.PhotoImage(file = "img/hydrophone.png")
     canvas.create_image(hydrophone_x, hydrophone_y, image = hydrophone, anchor="center")
@@ -87,6 +83,7 @@ def process_updates(root, state):
 def show():
     root = tk.Tk()
     root.title('Harbour Porpoise Map')
+    root.resizable(False, False)
     # root.attributes("-fullscreen", True)
     state = {}
     state["next"] = process_updates(root, state).__next__
