@@ -5,12 +5,12 @@
 #include <unistd.h>
 
 #define RANGE_MIN (300)
-#define RANGE_MAX (1600)
+#define RANGE_MAX (1000)
 
 #define ANGLE_MIN (0)
 #define ANGLE_MAX (2 * M_PI)
 
-#define RAND_DOUBLE ((double)rand()/RAND_MAX)
+#define RAND_DOUBLE ((double) rand() / RAND_MAX)
 
 int main(void) {
     srand(time(NULL));

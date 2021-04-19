@@ -120,7 +120,12 @@ def show():
 
 def handle_serial_connection():
     global ser
-    read_serial_connection(ser)
+    if (ser is None):
+        on_update(0, 921, 2.52)
+        while (True):
+            time.sleep(0.01)
+    else:
+        read_serial_connection(ser)
 
     # close application when serial port closes    
     os._exit(1)
