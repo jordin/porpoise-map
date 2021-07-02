@@ -5,6 +5,7 @@ Created on: 2021-02-24
 File: map.py
 Description: handles the gui
 """
+import LatLon23
 from PIL import Image, ImageTk
 import threading, sys, os
 import tkinter as tk
@@ -22,6 +23,7 @@ img_height = 861
 # hydrophone position
 hydrophone_x = 700
 hydrophone_y = 600
+hydrophone_lat_lon = LatLon23.LatLon(LatLon23.Latitude(45.33964286766197), LatLon23.Longitude(-64.38384867230519))
 
 # porpoise position 
 default_porpoise_x = 800 
@@ -30,9 +32,10 @@ default_porpoise_y = 500
 # porpoise position (initially off screen)
 porpoise_x = -100
 porpoise_y = -100
+porpoise_lat_lon = None
 
 # Map scale
-metre_to_pixel_multiplier = 0.0712867647
+metre_to_pixel_multiplier = 0.078
 
 # pending outgoing messages
 send_queue = []
@@ -58,9 +61,15 @@ porpoise_theta = "?"
 def log(msg):
     print(msg, flush=True)
 
+def format_coord(coord):
+    return f'{int(coord.degree)}°{int(abs(coord.minute))}\'{abs(coord.second):.3f} {coord.get_hemisphere()}'
+
+def format_latlon(latlon):
+    return f'{format_coord(latlon.lat)}, {format_coord(latlon.lon)}'.replace("-", "") # - is handled by displaying the hemisphere
+
 # update the map window
 def process_updates(root, state):
-    global pos_x, pos_y, img_width, img_height, ser, r, theta
+    global pos_x, pos_y, img_width, img_height, ser, r, theta, porpoise_lat_lon
     # create window with appropriate size
     canvas = tk.Canvas(root, width = img_width, height = img_height)
     canvas.pack()
@@ -83,12 +92,14 @@ def process_updates(root, state):
         while True:
             range_text = None
             theta_text = None
+            hydrophone_text = None
+            porpoise_text = None
             # update porpoise icon position
             porpoise = canvas.create_image(porpoise_x, porpoise_y, image = porpoise_img, anchor="center")
 
-            if porpoise_r != "?":
-                range_text = canvas.create_text(4, 4, fill="black", font = "Arial 24", text=f"Range: {int(porpoise_r)}m", anchor="nw")
-                theta_text = canvas.create_text(4, 44, fill="black", font = "Arial 24", text=f"Angle: {int(math.degrees(porpoise_theta))}°", anchor="nw")
+            if porpoise_lat_lon is not None:
+                hydrophone_text = canvas.create_text(4, 4, fill="black", font = "Arial 24", text=f"Hydrophone: {format_latlon(hydrophone_lat_lon)}", anchor="nw")
+                porpoise_text = canvas.create_text(4, 44, fill="black", font = "Arial 24", text=f"Porpoise: {int(porpoise_r)}m @ {int(math.degrees(porpoise_theta))}° ({format_latlon(porpoise_lat_lon)})", anchor="nw")
 
             root.after_idle(state["next"])
 
@@ -99,6 +110,10 @@ def process_updates(root, state):
                 canvas.delete(range_text)
             if theta_text is not None:
                 canvas.delete(theta_text)
+            if hydrophone_text is not None:
+                canvas.delete(hydrophone_text)
+            if porpoise_text is not None:
+                canvas.delete(porpoise_text)
     except: # window closes (CONTROL+C or X button)
         # close serial port
         if ser is not None:
@@ -131,11 +146,15 @@ def handle_serial_connection():
     os._exit(1)
 
 def on_update(i, r, theta):
-    global porpoise_x, porpoise_y, hydrophone_x, hydrophone_y, metre_to_pixel_multiplier, porpoise_r, porpoise_theta
+    global porpoise_x, porpoise_y, hydrophone_x, hydrophone_y, metre_to_pixel_multiplier, porpoise_r, porpoise_theta, hydrophone_lat_lon, porpoise_lat_lon
     porpoise_x = hydrophone_x + metre_to_pixel_multiplier * (r * math.cos(theta))
     porpoise_y = hydrophone_y - metre_to_pixel_multiplier * (r * math.sin(theta))
     porpoise_r = r
     porpoise_theta = theta
+    print(theta)
+    print(r/1000)
+    porpoise_lat_lon = hydrophone_lat_lon.offset(theta, r / 1000)
+    print("hi")
 
 def read_serial_connection(ser):
     # ser.write("./map")
@@ -157,7 +176,8 @@ def read_serial_connection(ser):
 
     ser.is_open = False
 
-try:
-    show()
-except:
-    os._exit(1)
+show()
+# try:
+#     show()
+# except:
+#     os._exit(1)
