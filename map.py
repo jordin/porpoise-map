@@ -151,10 +151,7 @@ def on_update(i, r, theta):
     porpoise_y = hydrophone_y - metre_to_pixel_multiplier * (r * math.sin(theta))
     porpoise_r = r
     porpoise_theta = theta
-    print(theta)
-    print(r/1000)
     porpoise_lat_lon = hydrophone_lat_lon.offset(theta, r / 1000)
-    print("hi")
 
 def read_serial_connection(ser):
     # ser.write("./map")
