@@ -69,7 +69,7 @@ def format_latlon(latlon):
 
 # update the map window
 def process_updates(root, state):
-    global pos_x, pos_y, img_width, img_height, ser, r, theta, porpoise_lat_lon
+    global img_width, img_height, ser, hydrophone_lat_lon, porpoise_lat_lon, porpoise_r, porpoise_theta
     # create window with appropriate size
     canvas = tk.Canvas(root, width = img_width, height = img_height)
     canvas.pack()
@@ -173,8 +173,7 @@ def read_serial_connection(ser):
 
     ser.is_open = False
 
-show()
-# try:
-#     show()
-# except:
-#     os._exit(1)
+try:
+    show()
+except:
+    os._exit(1)
