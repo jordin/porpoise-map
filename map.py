@@ -6,7 +6,7 @@ File: map.py
 Description: handles the gui
 """
 import LatLon23
-from PIL import Image, ImageTk
+from PIL import ImageTk
 import threading, sys, os
 import tkinter as tk
 import connection as conn
