@@ -166,14 +166,13 @@ def on_update(i, r, theta):
     porpoise_lat_lon = hydrophone_lat_lon.offset(theta, r / 1000)
 
 def read_serial_connection(ser):
-    # ser.write("./map")
+    ser.write(b'\x03\n') # CONTROL+C
     ser.write(b'\x03\n') # CONTROL+C
 
-    if (parrsboro):
-        ser.write(b'./play_recording spiral-simulation.wav\n')
-    else:
-        ser.write(b'./play_recording old-geometry.wav\n')
+    ser.write(b'./config-ip.sh\n')
 
+    ser.write(b'./run_trac_tdoa\n')
+    
     while (ser.is_open):
         # read in all data received
         while (ser.in_waiting):
