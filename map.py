@@ -13,17 +13,31 @@ import connection as conn
 import math
 import time
 
-port = None
-baud_rate = 115200 # default baud rate
-
 # map image dimensions
-img_width = 1353
-img_height = 861
+img_width = 1300
+img_height = 825
 
 # hydrophone position
-hydrophone_x = 700
-hydrophone_y = 600
-hydrophone_lat_lon = LatLon23.LatLon(LatLon23.Latitude(45.33964286766197), LatLon23.Longitude(-64.38384867230519))
+# hydrophone_x = 430
+# hydrophone_y = 530
+
+parrsboro = True
+if len(sys.argv) > 1:
+    parrsboro = sys.argv[1] != '1'
+
+if (parrsboro):
+    map_image = "img/map_parrsboro.png"
+    hydrophone_x = 450
+    hydrophone_y = 400
+    hydrophone_lat_lon = LatLon23.LatLon(LatLon23.Latitude(45.36705242670009), LatLon23.Longitude(-64.41993457568921))
+    metre_to_pixel_multiplier = 159 / 100
+else:
+    map_image = "img/map_grand_passage.png"
+    hydrophone_x = 450
+    hydrophone_y = 300
+    hydrophone_lat_lon = LatLon23.LatLon(LatLon23.Latitude(44.291236), LatLon23.Longitude(-66.343494))
+
+    metre_to_pixel_multiplier = 155 / 100
 
 # porpoise position 
 default_porpoise_x = 800 
@@ -33,20 +47,6 @@ default_porpoise_y = 500
 porpoise_x = -100
 porpoise_y = -100
 porpoise_lat_lon = None
-
-# Map scale
-metre_to_pixel_multiplier = 0.078
-
-# pending outgoing messages
-send_queue = []
-
-# check for user-defined com port
-if len(sys.argv) > 1:
-    port = sys.argv[1]
-
-# check for user-defined baud rate
-if len(sys.argv) > 2:
-    baud_rate = int(sys.argv[2])
 
 ser = conn.create_serial_connection()
 
@@ -74,7 +74,7 @@ def process_updates(root, state):
     canvas = tk.Canvas(root, width = img_width, height = img_height)
     canvas.pack()
 
-    background = ImageTk.PhotoImage(file = "img/map.png")
+    background = ImageTk.PhotoImage(file = map_image)
     canvas.create_image(img_width / 2, img_height / 2, image = background, anchor="center")
 
     hydrophone = ImageTk.PhotoImage(file = "img/hydrophone.png")
@@ -98,8 +98,8 @@ def process_updates(root, state):
             porpoise = canvas.create_image(porpoise_x, porpoise_y, image = porpoise_img, anchor="center")
 
             if porpoise_lat_lon is not None:
-                hydrophone_text = canvas.create_text(4, 4, fill="black", font = "Arial 24", text=f"Hydrophone: {format_latlon(hydrophone_lat_lon)}", anchor="nw")
-                porpoise_text = canvas.create_text(4, 44, fill="black", font = "Arial 24", text=f"Porpoise: {int(porpoise_r)}m @ {int(math.degrees(porpoise_theta))}° ({format_latlon(porpoise_lat_lon)})", anchor="nw")
+                hydrophone_text = canvas.create_text(4, 4, fill="white", font = "Arial 24", text=f"Hydrophone: {format_latlon(hydrophone_lat_lon)}", anchor="nw")
+                porpoise_text = canvas.create_text(4, 44, fill="white", font = "Arial 24", text=f"Porpoise: {int(porpoise_r)}m @ {int(math.degrees(porpoise_theta))}° ({format_latlon(porpoise_lat_lon)})", anchor="nw")
 
             root.after_idle(state["next"])
 
@@ -131,12 +131,24 @@ def show():
 
     root.after(1, state["next"])
 
+    # get screen width and height
+    ws = root.winfo_screenwidth() # width of the screen
+    hs = root.winfo_screenheight() # height of the screen
+
+    w = img_width
+    h = img_height
+
+    # # calculate x and y coordinates for the Tk root window
+    x = (ws) - (w)
+    # # set the dimensions of the screen 
+    # # and where it is placed
+    root.geometry('%dx%d+%d+%d' % (w, h, x, 0))
     root.mainloop()
 
 def handle_serial_connection():
     global ser
     if (ser is None):
-        on_update(0, 921, 2.52)
+        on_update(0, 121, 2.52)
         while (True):
             time.sleep(0.01)
     else:
@@ -155,19 +167,33 @@ def on_update(i, r, theta):
 
 def read_serial_connection(ser):
     # ser.write("./map")
+    ser.write(b'\x03\n') # CONTROL+C
+
+    if (parrsboro):
+        ser.write(b'./play_recording spiral-simulation.wav\n')
+    else:
+        ser.write(b'./play_recording old-geometry.wav\n')
+
     while (ser.is_open):
         # read in all data received
         while (ser.in_waiting):
             line = ser.readline()
             log(f"Raw: {line}")
             
-            params = line.split()
+            try:
+                params = line.split()
 
-            i = int(params[0])
-            r = float(params[1])
-            theta = float(params[2])
+                if (len(params) == 3):
+                    i = int(params[0])
+                    theta = float(params[1])
+                    r = float(params[2])
 
-            on_update(i, r, theta)
+                    if (r == 500):
+                        r = 40
+
+                    on_update(i, r, math.radians(theta))
+            except:
+                pass
 
         time.sleep(0.01)
 
