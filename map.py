@@ -18,26 +18,11 @@ img_width = 1300
 img_height = 825
 
 # hydrophone position
-# hydrophone_x = 430
-# hydrophone_y = 530
-
-parrsboro = True
-if len(sys.argv) > 1:
-    parrsboro = sys.argv[1] != '1'
-
-if (parrsboro):
-    map_image = "img/map_parrsboro.png"
-    hydrophone_x = 450
-    hydrophone_y = 400
-    hydrophone_lat_lon = LatLon23.LatLon(LatLon23.Latitude(45.36705242670009), LatLon23.Longitude(-64.41993457568921))
-    metre_to_pixel_multiplier = 159 / 100
-else:
-    map_image = "img/map_grand_passage.png"
-    hydrophone_x = 450
-    hydrophone_y = 300
-    hydrophone_lat_lon = LatLon23.LatLon(LatLon23.Latitude(44.291236), LatLon23.Longitude(-66.343494))
-
-    metre_to_pixel_multiplier = 155 / 100
+map_image = "img/map_parrsboro.png"
+hydrophone_x = 450
+hydrophone_y = 400
+hydrophone_lat_lon = LatLon23.LatLon(LatLon23.Latitude(45.36705242670009), LatLon23.Longitude(-64.41993457568921))
+metre_to_pixel_multiplier = 159 / 100
 
 # porpoise position 
 default_porpoise_x = 800 
@@ -131,18 +116,6 @@ def show():
 
     root.after(1, state["next"])
 
-    # get screen width and height
-    ws = root.winfo_screenwidth() # width of the screen
-    hs = root.winfo_screenheight() # height of the screen
-
-    w = img_width
-    h = img_height
-
-    # # calculate x and y coordinates for the Tk root window
-    x = (ws) - (w)
-    # # set the dimensions of the screen 
-    # # and where it is placed
-    root.geometry('%dx%d+%d+%d' % (w, h, x, 0))
     root.mainloop()
 
 def handle_serial_connection():
